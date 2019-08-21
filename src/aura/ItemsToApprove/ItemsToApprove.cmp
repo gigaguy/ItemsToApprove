@@ -1,8 +1,39 @@
+<!--
+Name: ItemsToApprove
+======================================================
+======================================================
+Purpose:
+Controller to get the list of pending approvals for the current user
+======================================================
+======================================================
+History
+
+VERSION AUTHOR DATE DETAIL FEATURES/CSR/TTP
+1.0   Melissa Shepard 8/11/2019 Initial development
+1.0   Roy King        8/20/2019 Converted to Datatable, added Infinite Scroll, and sort
+-->
 <aura:component controller="ItemsToApprove"  implements="flexipage:availableForAllPageTypes,force:hasRecordId" >
-  <aura:handler name="init" value="{!this}" action="{!c.loadData}"/>
+  <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+<!--Data-->
   <aura:attribute name="wrapperList" type="object[]"/>
-    <aura:attribute name="columns" type="List"/> 
-   
+  <aura:attribute name="DataList" type="object[]"/>
+  <aura:attribute name="columns" type="List"/>
+
+<!-- Infinite loading-->
+  <aura:attribute name="spinner" type="Boolean" default="false" />
+  <aura:attribute name="PagedData" type="object[]"/>
+  <aura:attribute name="totalRecords" type="integer" default="0"/>
+  <aura:attribute name="totalRecordsToDisplay" type="integer" default="5"/>
+  <aura:attribute name="loadMoreOffset" type="integer" default="1"/>
+  <aura:attribute name="showNoRecordMessage" type="Boolean" default="false" />
+  <aura:attribute name="enableInfiniteLoading" type="Boolean" default="true"/>
+
+  <!-- Sorting -->
+  <aura:attribute name="sortedBy" type="String" default="Name"/>
+  <aura:attribute name="sortedDirection" type="String" default="asc"/>
+
+
   <div class="slds-m-around_xxx-small">
 
 <article class="slds-card">
@@ -11,50 +42,52 @@
       <div class="slds-media__body">
         <h2 class="slds-card__header-title">
           <a href="javascript:void(0);" class="slds-card__header-link slds-truncate" title="Your Items to Approve">
-            <span>Your Items to Approve</span>
+            <span>Your Items to Approve ({! v.DataList.length })</span>
           </a>
         </h2>
       </div>
     </header>
   </div>
-      <div class="slds-card__body">
-
-                        <lightning:datatable
-                                 keyField="id"
-                                 data="{! v.wrapperList }"
-                                 columns="{! v.columns }"
-                                 hideCheckboxColumn="true"
-                                 />
-<!-- Removing in favor of the datatable
-   <br/>
-      <table class="slds-table slds-table-\-bordered slds-table-\-cell-buffer" role="grid" >      
-            <thead>  
-                <tr class="slds-text-title-\-caps">
-                    <th>Name</th>
-                    <th>Submitter</th>
-                    <th>Date Submitted</th>
-                    <th>Comments</th>
-                    <th>Status</th>
-                    <th>Record Type</th>
-                    <th>Other Info</th>
-                </tr>
-          </thead>
-          <tbody>
-          	<aura:iteration items="{!v.wrapperList}" var="details">
-              <tr>
-                  <td><a href="{!'/one/one.app?#/sObject/'+ details.RecordId + '/view'}" target="_blank">{!details.RecordName}</a></td>
-                  <td>{!details.ApproverName}</td>
-                  <td>{!details.CreatedDate}</td>
-                  <td>{!details.Comments}</td>
-                  <td>{!details.Status}</td>
-                  <td>{!details.RecordType}</td>
-                  <td>{!details.MiscInfo}</td>
-              </tr>
-            </aura:iteration>
-          </tbody>
-      </table>  
--->
-    </div>
+  <div class="BodyCss slds-theme_default">
+    <!--If No Records Found Code START-->
+    <aura:if isTrue="{!v.showNoRecordMessage}">
+        <span class="slds-text-heading_large slds-text-align_center slds-text-color_error">
+            <h1 style="margin-top:30px">No Pending Approvals Found</h1>
+        </span>
+      <!--If No Records Found Code End-->
+      <!--Show Table with Records Code START-->
+      <aura:set attribute="else">
+        <lightning:accordion>
+            <aura:set attribute="body">
+              <div style="height: 210px">
+                <lightning:datatable columns="{!v.columns}"
+                                     data="{! v.PagedData}"
+                                     keyField="Id"
+                                     hideCheckboxColumn="true"
+                                     enableInfiniteLoading="{! v.enableInfiniteLoading}"
+                                     loadMoreOffset="{! v.loadMoreOffset }"
+                                     isLoading="false"
+                                     onloadmore="{! c.loadMore }"
+                                     onsort="{!c.updateColumnSorting}"
+                                     sortedBy="{!v.sortedBy}"
+                                     sortedDirection="{!v.sortedDirection}"
+                />
+                <aura:if isTrue="{!v.spinner}">
+                  <div aura:id="spinnerId" class="slds-spinner_container">
+                    <div class="slds-spinner--brand  slds-spinner slds-spinner--large slds-is-relative" role="alert">
+                      <span class="slds-assistive-text">Loading</span>
+                      <div class="slds-spinner__dot-a"></div>
+                      <div class="slds-spinner__dot-b"></div>
+                    </div>
+                  </div>
+                </aura:if>
+              </div>
+            </aura:set>
+        </lightning:accordion>
+      </aura:set>
+    </aura:if>
+    <!--Show Table with Records Code Ends-->
+  </div>
 </article>
     </div>
     

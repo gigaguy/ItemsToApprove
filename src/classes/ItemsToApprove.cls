@@ -1,21 +1,39 @@
+/**********************************************************************
+Name: ItemsToApprove
+======================================================
+======================================================
+Purpose:
+-------
+Controller to get the list of pending approvals for the current user
+======================================================
+======================================================
+History
+-------
+VERSION AUTHOR DATE DETAIL FEATURES/CSR/TTP
+1.0   Melissa Shepard 8/11/2019 Initial development
+1.0   Roy King        8/20/2019 Converted to Datatable, added Infinite Scroll, and sort
+
+**********************************************************************/
+
 public class ItemsToApprove {
     
     @AuraEnabled
     public static List<Wrapperclass> wrapperClass() {
         List<Wrapperclass> wrapList = new List<Wrapperclass>();
-        for (ProcessInstance pi: [SELECT Id, Status, TargetObjectId, TargetObject.Name, CreatedDate,  
-                (SELECT Id, ActorId, Actor.Name, OriginalActorId, OriginalActor.Name, StepStatus, Comments, ElapsedTimeInHours, ProcessNode.Name, CreatedDate FROM StepsAndWorkitems where OriginalActorId=: userinfo.getuserId()) 
-                FROM ProcessInstance WHERE status='Pending' ORDER BY TargetObjectId] ) {
+        for (ProcessInstance pi: [SELECT Id, Status, TargetObjectId, TargetObject.Name, CreatedDate, CreatedById,
+                (SELECT Id, ActorId, Actor.Name, OriginalActorId, OriginalActor.Name, StepStatus, Comments, ElapsedTimeInHours, ProcessNode.Name, CreatedDate
+                 FROM StepsAndWorkitems where ActorId=:userinfo.getuserId() ORDER By CreatedDate DESC LIMIT 1)
+                FROM ProcessInstance WHERE status='Pending' ] ) {
                     for (ProcessInstanceHistory pih : pi.StepsAndWorkItems) {
                         Wrapperclass pendingApprovalWrap = new Wrapperclass();
-                        pendingApprovalWrap.Status = pih.StepStatus;
+                        pendingApprovalWrap.Status = pi.Status;
                         pendingApprovalWrap.ElapsedHours = pih.ElapsedTimeInHours;
-                        pendingApprovalWrap.CreatedDate = String.valueof(pih.createddate).split(' ')[0];
+                        pendingApprovalWrap.CreatedDate = String.valueof(pi.createddate).split(' ')[0];
                         pendingApprovalWrap.RecordName = String.valueOf(pi.TargetObject.Name);
                         pendingApprovalWrap.RecordId = String.valueOf(pi.TargetObjectId);
                         pendingApprovalWrap.RecordURL = '/one/one.app?#/sObject/'+ String.valueOf(pi.TargetObjectId) + '/view';
                         pendingApprovalWrap.RecordObject = String.valueOf(pi.TargetObjectId.getSObjectType()).split('__')[0];
-                        pendingApprovalWrap.AssignedToName = String.valueOf(pih.OriginalActor.Name);
+                        pendingApprovalWrap.Submitter = String.ValueOf(getObjectField('Name','user','id=\''+pi.CreatedById+'\''));
                         pendingApprovalWrap.ApproverName = pih.Actor.Name;
                         pendingApprovalWrap.Comments = pih.Comments;
                                                 
@@ -48,7 +66,7 @@ public class ItemsToApprove {
         @AuraEnabled public String RecordId {get; set;}
         @AuraEnabled public String RecordURL {get; set;}
         @AuraEnabled public String RecordObject {get; set;}        
-        @AuraEnabled public String AssignedToName {get; set;}
+        @AuraEnabled public String Submitter {get; set;}
         @AuraEnabled public String ApproverName {get; set;}
         @AuraEnabled public String Comments {get; set;}
         @AuraEnabled public String MiscInfo {get; set;}
